@@ -45,6 +45,7 @@ if (FALSE){
   wtsGIS::writeTableToCSV(tmp,file=file.path(dirCurr,paste0("PTI.EndLocations.1968-",YEAR,".csv")));
   dfrPTI = readr::read_csv(file=file.path("./RCode","PTI_EndLocations1902-1967.csv"));
   dfrPTI = dplyr::bind_rows(dfrPTI,data.frame(year=as.numeric(format(as.Date(tmp$dayEnd),"%Y")),lat=tmp$latEnd,lon=tmp$lonEnd));
+  dfrPTI %<>% dplyr::mutate(diff_prev=lat-Hmisc::Lag(lat,shift=1));
   trks   = lst1$tracks;
   wtsUtilities::saveObj(lst1$tracks,file.path(dirCurr,paste0("rda_sfTrks_1968to",YEAR,".RData")));
   wtsUtilities::saveObj(dfrPTI,file.path(dirCurr,paste0("rda_dfrPTI_1902to",YEAR,".RData")));
