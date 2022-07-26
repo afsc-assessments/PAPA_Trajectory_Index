@@ -1,6 +1,6 @@
 Notes to update the PTI
 
-1. open doPTI_Update.R
+1. open RCode/doPTI_UpdatePTI.R
 2. edit "YEAR"
 3. Source the script or 
  3a. run the runOSCURS code fenced in the if (FALSE) {...} block

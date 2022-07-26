@@ -1,16 +1,19 @@
+require(ggplot2);
 require(magrittr);
 require(rOSCURS);
+
+#-NOTE: all paths should be relative to the project root folder
 
 YEAR<-2022;
 stLLs<-tibble::tibble(LATITUDE=50,LONGITUDE=-145);#--PAPA Ocean Station location
 
-dirCurr = file.path(".",YEAR);
+dirCurr = file.path(".","CurrentResults");
 if (!dir.exists(dirCurr)) dir.create(dirCurr)
+fnBase="PTI_";
+path="./Trajectories";
 
 #--run the OSCURS model
 #----first valid year for website data is Dec 1, 1967.
-fnBase="PTI_";
-path="./Trajectories";
 if (FALSE){
   #--run the model and save output to ./Trajectories
   randNum<-round(runif(1,1,10000));
@@ -40,12 +43,15 @@ if (FALSE){
   tmp$lonStart <- -1*tmp$lonStart;#switch to degrees west
   tmp$lonEnd   <- -1*tmp$lonEnd;  #switch to degrees west
   wtsGIS::writeTableToCSV(tmp,file=file.path(dirCurr,paste0("PTI.EndLocations.1968-",YEAR,".csv")));
-  dfrPTI<-read.csv(file="PTI_EndLocations1902-1967.csv",stringsAsFactors=FALSE);
-  dfrPTI<-rbind(dfrPTI,data.frame(year=as.numeric(format(as.Date(tmp$dayEnd),"%Y")),lat=tmp$latEnd,lon=tmp$lonEnd));
-  wtsUtilities::saveObj(dfrPTI,file.path(dirCurr,paste0("dfrPTI_1902to",YEAR,".RData")));
-  rm(tmp);
+  dfrPTI = readr::read_csv(file=file.path("./RCode","PTI_EndLocations1902-1967.csv"));
+  dfrPTI = dplyr::bind_rows(dfrPTI,data.frame(year=as.numeric(format(as.Date(tmp$dayEnd),"%Y")),lat=tmp$latEnd,lon=tmp$lonEnd));
+  trks   = lst1$tracks;
+  wtsUtilities::saveObj(lst1$tracks,file.path(dirCurr,paste0("rda_sfTrks_1968to",YEAR,".RData")));
+  wtsUtilities::saveObj(dfrPTI,file.path(dirCurr,paste0("rda_dfrPTI_1902to",YEAR,".RData")));
+  rm(tmp,lst1);
 } else {
-  dfrPTI = wtsUtilities::getObj(file.path(dirCurr,paste0("dfrPTI_1902to",YEAR,".RData")));
+  trks   = wtsUtilities::getObj(file.path(dirCurr,paste0("rda_sfTrks_1968to",YEAR,".RData")));
+  dfrPTI = wtsUtilities::getObj(file.path(dirCurr,paste0("rda_dfrPTI_1902to",YEAR,".RData")));
 }
 
 #--calculate smooth PTI using a gam
@@ -59,9 +65,8 @@ dfrPTI$mn_lat<-mean(dfrPTI$lat); #--long-term mean
 avg<-2; krnl<-kernel("daniell",avg); #--defines symmetric 5-point running average
 dfrPTI$krn_lat<-c(rep(NA,avg),stats::kernapply(dfrPTI$lat,krnl),rep(NA,avg));
 
-#--plot PTI with smooth
-require(ggplot2);
-clrs = c("L-T-M"="green","PTI"="black","5-Yr Running"="red");
+#--plot PTI with smooth (colours from NMFS palette)
+clrs = c("L-T-M"="#0093D0","PTI"="#4C9C2E","5-Yr Running"="#D65F00");
 p <- ggplot(dfrPTI,mapping=aes(x=year,y=lat,colour="PTI")) +
       geom_line(mapping=aes(y=mn_lat,colour="L-T-M"),size=1.25) +      #--long-term mean 
       geom_line(linetype=2) + geom_point() +                          #--annual PTI
@@ -82,72 +87,111 @@ p <- ggplot(dfrPTI,mapping=aes(x=year,y=lat,colour="PTI")) +
             legend.position  = "top",
             legend.title     = element_blank(),
             legend.text      = element_text(size=12,face="bold"),
-            panel.background = element_rect(fill="light blue"),
-            panel.grid.major = element_line(colour="black",size=0.25),
+            panel.background = element_rect(fill="white"),
+            panel.grid.major = element_line(colour="white",size=0.25),
             panel.grid.minor = element_blank(),
             panel.border     = element_rect(colour="black",fill=NA))
 print(p);
-ggsave(filename=file.path(dirCurr,"fig_2_PTI.png"),width=6,height=4,units="in")
+ggsave(filename=file.path(dirCurr,"fig_2_PTI.png"),width=6,height=4,units="in",dpi=600)
 
-#--get basemap
-bbx = wtsGIS::getBBox(c(-160,46,-125,61));
+#--plot tracks
+#----get basemap
+bbx = wtsGIS::getBBox(c(-160,46,-125,61.5));
 #strCRS<-tmaptools::get_proj4(3338,output="character")
 strCRS<-wtsGIS::get_crs(4326);
 shp = "~/Work/Programming/R/GitPackages/ACLIM2/Data/in/Map_layers/shp_files/global/natural_earth_vector/10m_physical/ne_10m_land.shp";
-sf_shp = wtsGIS::readShapefile(shp);
+sf_shp = wtsGIS::readShapefile(shp);#--in WGS84
 sf_lnd = sf_shp %>% sf::st_crop(bbx);
-# basemap<-wtsGIS::tmap_CreateBasemap(
-#                         layer.land=wtsGIS::getPackagedLayer("Alaska"),
-#                         layer.bathym=wtsGIS::getPackagedLayer("ShelfBathymetry"),
-#                         bbox=wtsGIS::getStandardBBox("CGOA"),
-#                         alpha.bathym=0.2,
-#                         colors.land="grey50",
-#                         colors.bg="grey85",
-#                         final.crs=strCRS);
-basemap<-wtsGIS::tmap_CreateBasemap(
-                        layer.land=sf_lnd,
-                        layer.bathym=wtsGIS::getPackagedLayer("ShelfBathymetry"),
-                        bbox=bbx,
-                        alpha.bathym=0.2,
-                        colors.land="grey50",
-                        colors.bg="grey85",
-                        final.crs=strCRS);
-#--plot map with all tracks
-tmp<-lst1$tracks;
-tmp$year<-as.numeric(substr(tmp$dayEnd,start=1,4));
-palette<-rev(wtsUtilities::createColorPalette(name="jet",n=11))[1:10];
-lst2<-plotPTI(tracks=tmp,
-              basemap=basemap,
-              bounding_box=bbx,
-              color_lines="year",
-              color_text="year",
-              alpha_lines=0.5,
-              palette=palette,
-              showMap=TRUE,
-              verbose=TRUE);
-png(filename=file.path(dirCurr,"mapAll.png"),width=775,height=473);#--was 775 x 473 pixels
-  print(lst2$map);
-dev.off();
+sf_bth = wtsGIS::getPackagedLayer("ShelfBathymetry") %>% sf::st_transform(strCRS) %>% sf::st_crop(bbx);
+bmls = wtsGIS::gg_CreateBasemapLayers(layer.land=sf_lnd,
+                                      layer.bathym=sf_bth,
+                                      bbox=bbx,
+                                      alpha.bathym=0.2,
+                                      colors.land="grey50",
+                                      colors.bg="white",
+                                      final.crs=strCRS
+                                      )
 
-#--plot map with tracks from last 10 years
-tmp1<-tmp[tmp$year>(YEAR-10),];
-lst3<-plotPTI(tracks=tmp1,
-              basemap=basemap,
-              bounding_box=bbx,
-              color_lines="year",
-              color_text="year",
-              alpha_lines=1.0,
-              palette=palette,
-              showMap=TRUE);
-png(filename=file.path(dirCurr,"fig_1_mapRecent.png"),,width=775,height=473);#--was 775 x 473 pixels
- print(lst3$map);
-dev.off();
-rm(tmp,lst3);
+#----plot maps with tracks
+trks$year<-substr(trks$dayEnd,start=1,4);
+trks_rcnt = trks %>% dplyr::filter(year==as.character(YEAR));
+#------function to get final location from each track
+#--------to provide coordinates to place track text label
+get_last<-function(sfc){
+  # message("starting get_last")
+  # message(print(sfc));
+  n = length(sfc);
+  # message("n = ",n)
+  dfr = tibble::tibble(x = vector(mode="numeric",length=n),
+                       y = vector(mode="numeric",length=n));
+  for (i in 1:n){
+    # message("i = ",i)
+    sfg = sfc[[i]];
+    # message("nrow(sfg) = ",nrow(sfg))
+    pt = sfg[nrow(sfg),];
+    # message("pt = ",pt);
+    dfr$x[i] = pt[1];
+    dfr$y[i] = pt[2];
+  }
+  # message("dfr = ",print(dfr))
+  sfc_pt = sfheaders::sfc_point(dfr,x="x",y="y");
+  sf::st_crs(sfc_pt) = sf::st_crs(sfc);
+  # message(print(sfc_pt))
+  # message("finished get_last\n\n")
+  return(sfc_pt)
+}
+#res = get_last(trks$geometry)
 
-#--save tracks shapefile for ArcGIS
-shp = file.path(dirCurr,paste0("PTI.Tracks.1968-",YEAR,".shp"));
-wtsGIS::writeToShapefile(lst2$tracks,file=shp);
+#----plot map of all tracks
+map_all = ggplot(trks %>% dplyr::filter(year!=as.character(YEAR)),
+                 aes(colour=year,label=year)) + 
+            geom_sf(data=sf_lnd,inherit.aes=FALSE) + 
+            geom_sf(data=sf_bth,inherit.aes=FALSE) +
+            geom_sf(alpha=0.5) + geom_sf_text(alpha=0.5,fun.geometry=get_last) +
+            geom_sf(data=trks_rcnt,colour="black",size=2) +
+            geom_sf_text(data=trks_rcnt,colour="black",fun.geometry=get_last,nudge_x=1.6,size=6,fontface="bold") +
+            bmls$map_scale + 
+            bmls$theme + 
+            theme(panel.background=element_rect(colour="black",fill="white"),
+                  panel.border=element_rect(colour="black",fill=NA),
+                  legend.position="none");
+print(map_all);
+ggsave(filename=file.path(dirCurr,"mapAll.png"),plot=map_all,width=8,height=6,units="in");#--was 775 x 473 pixels
 
-#--save objects
-save(stLLs,fnBase,path,lst1,lst2,file=file.path(dirCurr,paste0("PTI.1968-",YEAR,".RData")));
+#----plot map of all tracks
+map_all = ggplot(trks, aes(colour=year,label=year)) + 
+            geom_sf(data=sf_lnd,inherit.aes=FALSE) + 
+            geom_sf(data=sf_bth,inherit.aes=FALSE) +
+            #--tracks before YEAR-10
+            geom_sf(     data=trks %>% dplyr::filter(as.numeric(year)<YEAR-10),colour="grey",alpha=0.3) + 
+            geom_sf_text(data=trks %>% dplyr::filter(as.numeric(year)<YEAR-10),colour="grey",alpha=0.3,fun.geometry=get_last) +
+            #--tracks YEAR-10<year<YEAR-1
+            geom_sf(     data=trks %>% dplyr::filter(dplyr::between(as.numeric(year),YEAR-10,YEAR-1)),alpha=1.0) +
+            geom_sf_text(data=trks %>% dplyr::filter(dplyr::between(as.numeric(year),YEAR-10,YEAR-1)),alpha=1.0,fun.geometry=get_last) +
+            #--current year track
+            geom_sf(     data=trks_rcnt,colour="black",size=2) +
+            geom_sf_text(data=trks_rcnt,colour="black",size=6,fun.geometry=get_last,nudge_x=1.6,fontface="bold") +
+            bmls$map_scale + 
+            bmls$theme + 
+            theme(panel.background=element_rect(colour="black",fill="white"),
+                  panel.border=element_rect(colour="black",fill=NA),
+                  legend.position="none");
+print(map_all);
+ggsave(filename=file.path(dirCurr,"fig_1_mapAll.png"),plot=map_all,width=8,height=6,units="in");#--was 775 x 473 pixels
+
+#--plot map of tracks from last 10 years
+map_rcnt = ggplot(trks %>% dplyr::filter(dplyr::between(as.numeric(year),YEAR-10,YEAR)),
+                 aes(colour=year,label=year)) + 
+            geom_sf(data=sf_lnd,inherit.aes=FALSE) + 
+            geom_sf(data=sf_bth,inherit.aes=FALSE) +
+            geom_sf(alpha=0.5) + geom_sf_text(alpha=1.0,fun.geometry=get_last,fontface="bold") +
+            geom_sf(data=trks_rcnt,colour="black",size=2) +
+            geom_sf_text(data=trks_rcnt,colour="black",fun.geometry=get_last,nudge_x=1.6,size=6,fontface="bold") +
+            bmls$map_scale + 
+            bmls$theme + 
+            theme(panel.background=element_rect(colour="black",fill="white"),
+                  panel.border=element_rect(colour="black",fill=NA),
+                  legend.position="none");
+print(map_rcnt);
+ggsave(filename=file.path(dirCurr,"fig_1_mapRecents.png"),plot=map_rcnt,width=8,height=6,units="in");#--was 775 x 473 pixels
 
