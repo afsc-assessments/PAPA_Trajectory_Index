@@ -13,11 +13,8 @@ The PTI itself is based on the ending latitude of the simulated drifter in each 
 
 ## Curent Results 
 
-The following shows the drifter trajectories for all years since 1968:
-<img src="CurrentResults/mapAll.png" width="600" alt="map of all trajectories">
-
-The following shows the drifter trajectories during the past decade:
-<img src="CurrentResults/fig_1_mapRecent.png" width="600" alt="map of trajectories for the previous 10 years">
+The following shows the drifter trajectories for all years since 1968: trajectories older than 10 years are in grey, trajectories during the last 10 years are in color, and the trajectory for the previous winter is in black:
+<img src="CurrentResults/fig_1_mapAll.png" width="600" alt="map of all trajectories">
 
 The actual PTI is shown in the following figure:
 <img src="CurrentResults/fig_2_PTI.png" width="600" alt="graph of the PAPA Trajectory Index">
