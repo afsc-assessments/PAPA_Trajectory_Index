@@ -1,7 +1,14 @@
 Notes to update the PTI
 
-1. open RCode/doPTI_UpdatePTI.R
-2. edit "YEAR"
-3. Source the script or 
- 3a. run the runOSCURS code fenced in the if (FALSE) {...} block
- 3b. continue running script
+1. Open the "PAPA Trajectory Index" R project (PAPA_Trajectory_Index.RProj) in RStudio
+2. Open RCode/doPTI_UpdatePTI.R
+3. Edit the script
+  3a. "YEAR"
+  3b. set COPY_CURR = TRUE (copy last year's results to ResultsPrevious)
+  3c. set NEW_YEAR = TRUE  (run the OSCURS model, download trajectory, update PTI)
+4. Source the script
+5. EDIT THE SCRIPT AGAIN!!
+  5a. set COPY_CURR = FALSE (!!!!--otherwise you copy new results to ResultsPrevious)
+  5b. set NEW_YEAR = FALSE  (don't run the OSCURS model, download trajectory, update PTI)
+6. Make any changes to figures, etc. now--can "source" the script again as necessary 
+    w/out screwing things up
