@@ -13,7 +13,7 @@ COPY_CURR = FALSE;#--flag to copy "current" files to PreviousResults
 NEW_YEAR  = FALSE;#--flag to run model and create new PTI files
 
 
-YEAR<-2023;
+YEAR<-2024;
 stLLs<-tibble::tibble(LATITUDE=50,LONGITUDE=-145);#--PAPA Ocean Station location
 
 #-NOTE: all paths should be relative to the project root folder
