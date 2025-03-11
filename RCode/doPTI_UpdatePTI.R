@@ -8,12 +8,12 @@ require(ggplot2);
 #--require(tibble);
 #--require(wtsPlots);
 
-#--EDIT THESE TWO LINES as necessary
-COPY_CURR = FALSE;#--flag to copy "current" files to PreviousResults
-NEW_YEAR  = FALSE;#--flag to run model and create new PTI files
+#--EDIT THESE THREE LINES as necessary (see NoteOnUpdatingPTI.txt)
+YEAR<-2025;
+COPY_CURR = TRUE;#--flag to copy "current" files to PreviousResults
+NEW_YEAR  = TRUE;#--flag to run model and create new PTI files
 
 
-YEAR<-2024;
 stLLs<-tibble::tibble(LATITUDE=50,LONGITUDE=-145);#--PAPA Ocean Station location
 
 #-NOTE: all paths should be relative to the project root folder
